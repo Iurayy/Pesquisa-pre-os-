@@ -1,41 +1,92 @@
-{
-  "total_budget": 6000.00,
-  "hardware_requirements": [
-    {
-      "category": "CPU",
-      "target_spec": "AMD Ryzen 5 7600 (ou similar em desempenho/plataforma AM5)"
-    },
-    {
-      "category": "Placa-Mãe",
-      "target_spec": "ASRock B650M-H/M.2+ (ou placa B650 AM5 equivalente em recursos)"
-    },
-    {
-      "category": "Memória RAM",
-      "target_spec": "32GB (2x16GB) Kingston Fury Beast DDR5 6000MHz CL30/CL36 (ou RAM DDR5 6000MHz equivalente)"
-    },
-    {
-      "category": "Placa de Vídeo",
-      "target_spec": "Radeon RX 9060 XT 16GB (ou GPU similar de mesmo nível de desempenho/VRAM)"
-    },
-    {
-      "category": "Fonte",
-      "target_spec": "MSI MAG A650BN 650W (ou fonte 650W com certificação 80 Plus Bronze/Cybenetics confiável)"
-    },
-    {
-      "category": "Monitor",
-      "target_spec": "LG UltraGear 24\" 144Hz/180Hz IPS (ou monitor gamer similar 24\" 144Hz+ IPS)"
-    },
-    {
-      "category": "Armazenamento",
-      "target_spec": "SSD 1TB NVMe M.2 PCIe 4.0 (leitura acima de 3500MB/s)"
-    },
-    {
-      "category": "Gabinete",
-      "target_spec": "Husky Dome 100 (ou gabinete Mid Tower com frente mesh e boa refrigeração)"
-    },
-    {
-      "category": "Refrigeração",
-      "target_spec": "Kit 3 ou 4 Fans 120mm PWM (alto fluxo de ar)"
+import os
+import json
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
+from google import genai
+import requests
+
+app = FastAPI(title="PC Price Advisor API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+
+class ItemRequirement(BaseModel):
+    category: str
+    target_spec: str
+
+class FolderAnalysisRequest(BaseModel):
+    folder_name: str
+    total_budget: float
+    items: List[ItemRequirement]
+    notify_telegram: bool = False
+
+def send_telegram_alert(message: str):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message,
+        "parse_mode": "Markdown",
+        "disable_web_page_preview": True
     }
-  ]
-}
+    try:
+        requests.post(url, json=payload, timeout=10)
+    except Exception:
+        pass
+
+@app.get("/")
+def health_check():
+    return {"status": "online", "message": "API Ativa"}
+
+@app.post("/analyze")
+def analyze_folder(data: FolderAnalysisRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY ausente.")
+
+    items_text = "\n".join([f"- {it.category}: {it.target_spec}" for it in data.items])
+
+    prompt = f"""
+    Você é um especialista em hardware e orçamentos de PC no Brasil.
+    Orçamento teto: R$ {data.total_budget:.2f}
+    Itens:
+    {items_text}
+
+    Retorne ESTRITAMENTE um JSON válido (sem markdown, sem ```json) com esta estrutura exata:
+    {{
+      "items": [
+        {{
+          "category": "CPU",
+          "name": "Nome da peça principal",
+          "price": 1200.00,
+          "similars": [
+            {{ "name": "Similar 1", "price": 1050.00, "note": "mesmo desempenho sem vídeo integrado" }},
+            {{ "name": "Similar 2", "price": 1150.00, "note": "ótima alternativa" }}
+          ]
+        }}
+      ],
+      "summary_report": "Texto do seu relatório e veredito final, analisando se o total cabe no orçamento e onde economizar."
+    }}
+    Preços em reais numéricos (float).
+    """
+
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt
+        )
+        raw_text = response.text.strip()
+        if raw_text.startswith("
