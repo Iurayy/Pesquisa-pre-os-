@@ -2,91 +2,142 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Setup Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Setup & Hardware Studio</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- BARRA DE NAVEGAÇÃO MOBILE -->
+  <header class="mobile-nav">
+    <button id="toggleFoldersMobile" class="nav-icon-btn" title="Pastas">📁</button>
+    <div class="mobile-title">
+      <span id="mobileFolderLabel">Meu Projeto</span>
+    </div>
+    <button id="toggleBudgetMobile" class="nav-icon-btn" title="Orçamento">💰</button>
+  </header>
+
   <div class="workspace-layout">
     
     <!-- COLUNA 1: PASTAS / PROJETOS -->
-    <aside class="sidebar-left">
+    <aside id="sidebarLeft" class="sidebar-left">
       <div class="sidebar-header">
-        <span class="badge">Workspaces</span>
-        <button id="newFolderBtn" class="btn-secondary">+ Nova Pasta</button>
+        <div class="brand">
+          <span class="brand-pill">Studio Pro</span>
+          <h2>Projetos</h2>
+        </div>
+        <button id="newFolderBtn" class="btn-action">+ Nova Pasta</button>
       </div>
       <ul id="folderList" class="folder-list"></ul>
     </aside>
 
-    <!-- COLUNA 2: CONTEÚDO PRINCIPAL E RELATÓRIO -->
+    <!-- COLUNA 2: WORKSPACE PRINCIPAL -->
     <main class="main-content">
+      
+      <!-- CABEÇALHO DO PROJETO -->
       <header class="project-header">
         <div>
-          <h1 id="currentFolderTitle">Selecione uma Pasta</h1>
-          <p class="subtitle">Arraste um similar para cima do item principal para trocá-lo e recalcular o valor.</p>
+          <h1 id="currentFolderTitle">Setup Principal</h1>
+          <p class="subtitle">Adicione itens de qualquer nicho. A IA compara preços e alternativas na mesma categoria.</p>
         </div>
         <button id="runAnalysisBtn" class="primary-btn">
-          <span id="runBtnText">Atualizar com IA</span>
+          <span id="runBtnText">Pesquisar com IA</span>
           <div id="loadingSpinner" class="spinner hidden"></div>
         </button>
       </header>
 
-      <!-- SEÇÃO EXPANSÍVEL: GERENCIAR ITENS DA PASTA -->
+      <!-- SEÇÃO RECOLHÍVEL: ITENS PARA PESQUISA -->
       <details class="items-accordion" open>
-        <summary>Gerenciar Componentes da Pasta (<span id="accordionCount">0</span>)</summary>
+        <summary>
+          <span>🎯 Componentes a Pesquisar (<strong id="accordionCount">0</strong>)</span>
+          <span class="accordion-arrow">▾</span>
+        </summary>
         <div class="accordion-body">
           <div class="add-item-form">
-            <input type="text" id="inputCat" placeholder="Categoria (ex: CPU, GPU)">
-            <input type="text" id="inputSpec" placeholder="Modelo ou busca (ex: Ryzen 5 7600)">
-            <button id="addSpecBtn" class="btn-secondary">Adicionar</button>
+            <input type="text" id="inputCat" placeholder="Categoria (ex: GPU, Teclado, Monitor)" required>
+            <input type="text" id="inputSpec" placeholder="Produto desejado ou especificação" required>
+            <button id="addSpecBtn" class="btn-accent">+ Adicionar</button>
           </div>
           <ul id="configuredItemsList" class="chips-list"></ul>
         </div>
       </details>
 
-      <!-- CARDS DE COMPONENTES E SIMILARES -->
-      <section id="componentsContainer" class="components-grid"></section>
+      <!-- SISTEMA DE ABAS PRINCIPAIS -->
+      <div class="tab-switcher">
+        <button id="tabBtnComparison" class="tab-btn active" onclick="switchView('comparison')">
+          <span>⚡ Setup & Similares</span>
+        </button>
+        <button id="tabBtnSpecs" class="tab-btn" onclick="switchView('specs')">
+          <span>📋 Ficha Técnica & Informações</span>
+        </button>
+      </div>
 
-      <!-- RELATÓRIO DA IA -->
-      <section class="report-box">
-        <h3>Veredito & Consultoria de Mercado</h3>
-        <p id="reportContent">Clique em "Atualizar com IA" para gerar a cotação e buscar similares.</p>
+      <!-- ABA 1: COMPARAÇÕES E SIMILARES -->
+      <section id="viewComparison" class="view-panel active">
+        <div id="componentsContainer" class="components-grid">
+          <div class="empty-state">
+            <p>Nenhum produto analisado ainda. Adicione as peças acima e clique em <strong>"Pesquisar com IA"</strong>.</p>
+          </div>
+        </div>
+
+        <div class="report-card">
+          <h3>📊 Veredito & Análise Orçamentária</h3>
+          <p id="reportContent">A análise completa do orçamento e mercado aparecerá aqui após a busca.</p>
+        </div>
       </section>
+
+      <!-- ABA 2: DETALHES E ESPECIFICAÇÕES TÉCNICAS -->
+      <section id="viewSpecs" class="view-panel">
+        <div id="specsContainer" class="specs-grid">
+          <div class="empty-state">
+            <p>Execute uma pesquisa para ver imagens e fichas técnicas detalhadas de cada produto.</p>
+          </div>
+        </div>
+      </section>
+
     </main>
 
-    <!-- COLUNA 3: SUMMARY DE ORÇAMENTO EM TEMPO REAL -->
-    <aside class="sidebar-right">
-      <div class="budget-tracker">
-        <h3>Painel de Custo</h3>
-        
-        <div class="budget-field">
-          <label>Orçamento Teto</label>
-          <div class="money-input">
-            <span>R$</span>
+    <!-- COLUNA 3: PAINEL FINANCEIRO EM TEMPO REAL -->
+    <aside id="sidebarRight" class="sidebar-right">
+      <div class="budget-panel">
+        <div class="budget-header">
+          <h3>Resumo Financeiro</h3>
+          <span class="live-dot" title="Cálculo em tempo real"></span>
+        </div>
+
+        <div class="budget-input-group">
+          <label for="budgetInput">Orçamento Máximo</label>
+          <div class="input-currency-wrap">
+            <span class="currency-symbol">R$</span>
             <input type="number" id="budgetInput" value="6000" step="100">
           </div>
         </div>
 
-        <div class="price-breakdown">
-          <div class="row">
-            <span>Soma Atual:</span>
-            <strong id="totalCurrentPrice">R$ 0,00</strong>
+        <div class="budget-stats">
+          <div class="stat-row">
+            <span>Total Selecionado:</span>
+            <strong id="totalCurrentPrice" class="stat-value">R$ 0,00</strong>
           </div>
-          <div class="row">
-            <span>Saldo Restante:</span>
-            <strong id="remainingBalance">R$ 6.000,00</strong>
+          <div class="stat-row">
+            <span>Saldo Disponível:</span>
+            <strong id="remainingBalance" class="stat-value">R$ 6.000,00</strong>
           </div>
         </div>
 
-        <div class="progress-bar-wrap">
-          <div id="budgetProgress" class="progress-bar" style="width: 0%;"></div>
+        <div class="progress-container">
+          <div class="progress-labels">
+            <span>Uso do Limite</span>
+            <span id="progressPercent">0%</span>
+          </div>
+          <div class="progress-track">
+            <div id="budgetProgress" class="progress-bar" style="width: 0%;"></div>
+          </div>
         </div>
 
-        <div class="selected-summary">
-          <h4>Itens Selecionados</h4>
-          <ul id="selectedSummaryList"></ul>
+        <div class="selected-items-breakdown">
+          <h4>Itens no Carrinho</h4>
+          <ul id="selectedSummaryList" class="summary-list"></ul>
         </div>
       </div>
     </aside>
