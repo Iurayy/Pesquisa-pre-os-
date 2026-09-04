@@ -3,62 +3,94 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Setup Advisor</title>
+  <title>Setup Studio</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="app-container">
-    <header class="app-header">
-      <div class="header-title">
-        <span class="badge">IA Hardware</span>
-        <h1>Meu Setup</h1>
+  <div class="workspace-layout">
+    
+    <!-- COLUNA 1: PASTAS / PROJETOS -->
+    <aside class="sidebar-left">
+      <div class="sidebar-header">
+        <span class="badge">Workspaces</span>
+        <button id="newFolderBtn" class="btn-secondary">+ Nova Pasta</button>
       </div>
-      <div class="budget-card">
-        <label>Orçamento Teto</label>
-        <div class="budget-input-wrap">
-          <span>R$</span>
-          <input type="number" id="totalBudget" value="6000" step="100">
+      <ul id="folderList" class="folder-list"></ul>
+    </aside>
+
+    <!-- COLUNA 2: CONTEÚDO PRINCIPAL E RELATÓRIO -->
+    <main class="main-content">
+      <header class="project-header">
+        <div>
+          <h1 id="currentFolderTitle">Selecione uma Pasta</h1>
+          <p class="subtitle">Arraste um similar para cima do item principal para trocá-lo e recalcular o valor.</p>
+        </div>
+        <button id="runAnalysisBtn" class="primary-btn">
+          <span id="runBtnText">Atualizar com IA</span>
+          <div id="loadingSpinner" class="spinner hidden"></div>
+        </button>
+      </header>
+
+      <!-- SEÇÃO EXPANSÍVEL: GERENCIAR ITENS DA PASTA -->
+      <details class="items-accordion" open>
+        <summary>Gerenciar Componentes da Pasta (<span id="accordionCount">0</span>)</summary>
+        <div class="accordion-body">
+          <div class="add-item-form">
+            <input type="text" id="inputCat" placeholder="Categoria (ex: CPU, GPU)">
+            <input type="text" id="inputSpec" placeholder="Modelo ou busca (ex: Ryzen 5 7600)">
+            <button id="addSpecBtn" class="btn-secondary">Adicionar</button>
+          </div>
+          <ul id="configuredItemsList" class="chips-list"></ul>
+        </div>
+      </details>
+
+      <!-- CARDS DE COMPONENTES E SIMILARES -->
+      <section id="componentsContainer" class="components-grid"></section>
+
+      <!-- RELATÓRIO DA IA -->
+      <section class="report-box">
+        <h3>Veredito & Consultoria de Mercado</h3>
+        <p id="reportContent">Clique em "Atualizar com IA" para gerar a cotação e buscar similares.</p>
+      </section>
+    </main>
+
+    <!-- COLUNA 3: SUMMARY DE ORÇAMENTO EM TEMPO REAL -->
+    <aside class="sidebar-right">
+      <div class="budget-tracker">
+        <h3>Painel de Custo</h3>
+        
+        <div class="budget-field">
+          <label>Orçamento Teto</label>
+          <div class="money-input">
+            <span>R$</span>
+            <input type="number" id="budgetInput" value="6000" step="100">
+          </div>
+        </div>
+
+        <div class="price-breakdown">
+          <div class="row">
+            <span>Soma Atual:</span>
+            <strong id="totalCurrentPrice">R$ 0,00</strong>
+          </div>
+          <div class="row">
+            <span>Saldo Restante:</span>
+            <strong id="remainingBalance">R$ 6.000,00</strong>
+          </div>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div id="budgetProgress" class="progress-bar" style="width: 0%;"></div>
+        </div>
+
+        <div class="selected-summary">
+          <h4>Itens Selecionados</h4>
+          <ul id="selectedSummaryList"></ul>
         </div>
       </div>
-    </header>
+    </aside>
 
-    <section class="folder-section">
-      <label>Nome da Pasta / Projeto</label>
-      <input type="text" id="folderName" value="PC Gamer Ryzen AM5">
-    </section>
-
-    <section class="items-section">
-      <div class="section-header">
-        <h2>Componentes</h2>
-        <span id="itemCount">0 itens</span>
-      </div>
-
-      <div class="add-item-bar">
-        <input type="text" id="itemCategory" placeholder="Categoria (ex: GPU, CPU, RAM)">
-        <input type="text" id="itemSpec" placeholder="Modelo ou especificação desejada">
-        <button id="addItemBtn" type="button">+</button>
-      </div>
-
-      <ul id="itemsList" class="items-list"></ul>
-    </section>
-
-    <section class="actions-section">
-      <label class="toggle-telegram">
-        <input type="checkbox" id="notifyTelegram" checked>
-        <span>Enviar cópia para o Telegram</span>
-      </label>
-      <button id="analyzeBtn" class="primary-btn">
-        <span class="btn-text">Consultar Preços com IA</span>
-        <span class="spinner" id="btnSpinner"></span>
-      </button>
-    </section>
-
-    <section id="resultSection" class="result-section hidden">
-      <h2>Veredito da Consultoria</h2>
-      <div id="resultContent" class="result-content"></div>
-    </section>
   </div>
 
   <script src="app.js"></script>
