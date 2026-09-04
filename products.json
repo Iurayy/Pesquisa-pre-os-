@@ -1,50 +1,41 @@
 {
   "total_budget": 6000.00,
-  "items": [
+  "hardware_requirements": [
     {
-      "name": "Processador AMD Ryzen 5 7600",
-      "url": "https://www.kabum.com.br/link-do-produto",
-      "target_price": 1000.00
+      "category": "CPU",
+      "target_spec": "AMD Ryzen 5 7600 (ou similar em desempenho/plataforma AM5)"
     },
     {
-      "name": "Placa-Mãe ASRock B650M-H/M.2+",
-      "url": "https://www.terabyteshop.com.br/link-do-produto",
-      "target_price": 500.00
+      "category": "Placa-Mãe",
+      "target_spec": "ASRock B650M-H/M.2+ (ou placa B650 AM5 equivalente em recursos)"
     },
     {
-      "name": "Memória RAM 32GB Kingston Fury DDR5 6000MHz",
-      "url": "https://www.kabum.com.br/link-do-produto",
-      "target_price": 1200.00
+      "category": "Memória RAM",
+      "target_spec": "32GB (2x16GB) Kingston Fury Beast DDR5 6000MHz CL30/CL36 (ou RAM DDR5 6000MHz equivalente)"
     },
     {
-      "name": "Placa de Vídeo RX 9060 XT 16GB",
-      "url": "https://www.pichau.com.br/link-do-produto",
-      "target_price": 3300.00
+      "category": "Placa de Vídeo",
+      "target_spec": "Radeon RX 9060 XT 16GB (ou GPU similar de mesmo nível de desempenho/VRAM)"
     },
     {
-      "name": "Fonte MSI MAG A650BN 650W",
-      "url": "https://www.kabum.com.br/link-do-produto",
-      "target_price": 277.00
+      "category": "Fonte",
+      "target_spec": "MSI MAG A650BN 650W (ou fonte 650W com certificação 80 Plus Bronze/Cybenetics confiável)"
     },
     {
-      "name": "Monitor LG UltraGear 24\" 144Hz",
-      "url": "https://www.amazon.com.br/link-do-produto",
-      "target_price": 600.00
+      "category": "Monitor",
+      "target_spec": "LG UltraGear 24\" 144Hz/180Hz IPS (ou monitor gamer similar 24\" 144Hz+ IPS)"
     },
     {
-      "name": "SSD 1TB NVMe M.2",
-      "url": "https://www.kabum.com.br/link-do-produto",
-      "target_price": 650.00
+      "category": "Armazenamento",
+      "target_spec": "SSD 1TB NVMe M.2 PCIe 4.0 (leitura acima de 3500MB/s)"
     },
     {
-      "name": "Gabinete Husky Dome 100",
-      "url": "https://www.kabum.com.br/link-do-produto",
-      "target_price": 140.00
+      "category": "Gabinete",
+      "target_spec": "Husky Dome 100 (ou gabinete Mid Tower com frente mesh e boa refrigeração)"
     },
     {
-      "name": "Kit Fans 120mm",
-      "url": "https://www.terabyteshop.com.br/link-do-produto",
-      "target_price": 100.00
+      "category": "Refrigeração",
+      "target_spec": "Kit 3 ou 4 Fans 120mm PWM (alto fluxo de ar)"
     }
   ]
 }
