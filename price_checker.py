@@ -3,7 +3,7 @@ import json
 import urllib.parse
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 import requests
 from google import genai
@@ -23,6 +23,12 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
+def get_gemini_client():
+    key = os.environ.get("GEMINI_API_KEY", "")
+    if not key:
+        return None
+    return genai.Client(api_key=key)
+
 class ItemRequirement(BaseModel):
     category: str
     target_spec: str
@@ -32,29 +38,6 @@ class FolderAnalysisRequest(BaseModel):
     total_budget: float
     items: List[ItemRequirement]
     notify_telegram: Optional[bool] = False
-
-class SimilarItem(BaseModel):
-    name: str
-    price: float
-    note: str
-    specs: List[str] = []
-
-class AnalyzedItem(BaseModel):
-    category: str
-    name: str
-    price: float
-    specs: List[str] = []
-    similars: List[SimilarItem] = []
-
-class AIAnalysisResponse(BaseModel):
-    items: List[AnalyzedItem]
-    summary_report: str
-
-def get_gemini_client():
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return None
-    return genai.Client(api_key=api_key)
 
 def send_telegram_alert(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
@@ -73,11 +56,10 @@ def send_telegram_alert(message: str):
 
 @app.get("/")
 def health_check():
-    has_key = bool(os.environ.get("GEMINI_API_KEY"))
     return {
         "status": "online",
-        "gemini_configured": has_key,
-        "message": "Backend ativo"
+        "message": "Backend ativo e funcionando",
+        "gemini_ready": bool(os.environ.get("GEMINI_API_KEY"))
     }
 
 @app.post("/analyze")
@@ -86,39 +68,58 @@ def analyze_folder(data: FolderAnalysisRequest):
     if not client:
         raise HTTPException(
             status_code=500,
-            detail="A variável GEMINI_API_KEY não foi encontrada nas Environment Variables do Render."
+            detail="Chave GEMINI_API_KEY não localizada nas Environment Variables do Render."
         )
 
-    items_list_str = "\n".join([f"- {it.category}: {it.target_spec}" for it in data.items])
+    items_list_str = "\n".join([f"- Categoria: {it.category} | Especificação: {it.target_spec}" for it in data.items])
 
     prompt = f"""
-Você é um consultor especialista em hardware, periféricos e compras no Brasil.
+Você é um consultor especialista em tecnologia, hardware e compras no mercado brasileiro.
 Projeto: {data.folder_name}
-Orçamento Máximo: R$ {data.total_budget:.2f}
+Orçamento limite: R$ {data.total_budget:.2f}
 
 Itens solicitados:
 {items_list_str}
 
-Para cada item:
-1. Informe o nome do produto principal recomendado no mercado brasileiro e seu preço estimado à vista (em R$).
-2. Liste de 1 a 2 alternativas/similares na mesma categoria.
-3. Inclua 3 especificações sucintas para cada um.
-4. Faça uma análise no campo summary_report avaliando se os itens cabem nos R$ {data.total_budget:.2f}.
+Instruções:
+1. Para cada item, indique o nome oficial recomendado no Brasil, o preço estimado à vista (numérico float em R$) e 3 especificações sucintas.
+2. Forneça de 1 a 2 similares na MESMA categoria, com preço estimado e uma nota curta explicando o diferencial.
+3. Elabore um parecer sobre o orçamento em 'summary_report'.
+
+Gere EXCLUSIVAMENTE um JSON com esta estrutura:
+{{
+  "items": [
+    {{
+      "category": "Nome da Categoria",
+      "name": "Nome do Produto",
+      "price": 1000.0,
+      "specs": ["Espec 1", "Espec 2", "Espec 3"],
+      "similars": [
+        {{
+          "name": "Nome do Similar",
+          "price": 950.0,
+          "note": "ótimo custo-benefício",
+          "specs": ["Destaque 1", "Destaque 2"]
+        }}
+      ]
+    }}
+  ],
+  "summary_report": "Texto com o parecer e análise orçamentária."
+}}
 """
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=AIAnalysisResponse,
-            ),
+                response_mime_type="application/json"
+            )
         )
 
-        parsed = json.loads(response.text)
+        parsed = json.loads(response.text.strip())
 
-        # Adiciona links diretos de busca de compras
+        # Adiciona links dinâmicos de compra
         for it in parsed.get("items", []):
             q_main = urllib.parse.quote_plus(f"{it.get('category', '')} {it.get('name', '')}")
             it["store_url"] = f"https://www.google.com/search?tbm=shop&q={q_main}"
@@ -133,6 +134,8 @@ Para cada item:
 
         return parsed
 
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Erro de formatação JSON na resposta da IA.")
     except Exception as e:
-        print(f"Erro na IA: {e}")
-        raise HTTPException(status_code=500, detail=f"Erro interno da IA: {str(e)}")
+        print(f"Erro na geração: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
