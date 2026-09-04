@@ -20,58 +20,92 @@ def send_telegram_alert(message):
     }
     requests.post(url, json=payload, timeout=10)
 
-def extract_price_with_gemini(html_snippet):
+def extract_price(html_text):
     prompt = (
-        "Analise o texto a seguir e identifique o preço atual do produto principal/à vista. "
-        "Retorne APENAS o número com ponto decimal (ex: 149.90 ou 1250.00). "
-        "Não inclua R$, moedas ou texto explicativo. Se não achar, retorne 'null'.\n\n"
-        f"Texto:\n{html_snippet}"
+        "Identifique o preço à vista ou atual do produto neste texto. "
+        "Retorne APENAS o número decimal (ex: 1250.00). "
+        "Sem texto, sem moeda. Se não encontrar, retorne 'null'.\n\n"
+        f"{html_text[:3500]}"
     )
     try:
-        response = client.models.generate_content(
+        res = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )
-        val = response.text.strip()
-        clean_val = re.sub(r"[^\d.]", "", val)
-        return float(clean_val) if clean_val else None
+        clean = re.sub(r"[^\d.]", "", res.text.strip())
+        return float(clean) if clean else None
     except Exception:
         return None
 
-def check_prices():
+def analyze_budget_and_deals(budget, collected_data):
+    prompt = f"""
+    Você é um consultor especialista em hardware e montagem de PC.
+    O usuário tem um orçamento total estipulado de R$ {budget:.2f}.
+    
+    Aqui está a lista de componentes, seus preços-alvo e o preço atual detectado nas lojas:
+    {json.dumps(collected_data, indent=2, ensure_ascii=False)}
+    
+    Regras da sua análise:
+    1. Se algum componente bateu o 'target_price' (está barato), verifique se vale a pena comprar agora.
+    2. Calcule o impacto no orçamento total: se ele pagar o preço atual desta peça, o dinheiro que sobra é suficiente para pagar os alvos dos outros componentes?
+    3. Se não for suficiente, alerte explicitamente: 'Se você comprar X agora por R$ Y, vai estourar o orçamento e faltará dinheiro para [Componentes Z]'.
+    4. Se o preço estiver excelente e não comprometer o teto de R$ {budget:.2f}, encoraje a compra com: 'Vale a pena comprar agora!'.
+    5. Seja ultra direto, use tópicos curtos e emojis. Limite o texto a 180 palavras para leitura rápida no Telegram.
+    
+    Caso nenhum produto esteja em promoção vantajosa ou viável no momento, responda apenas: NO_ACTION
+    """
+    try:
+        res = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        return res.text.strip()
+    except Exception as e:
+        print(f"Erro na análise de IA: {e}")
+        return "NO_ACTION"
+
+def main():
     with open("products.json", "r", encoding="utf-8") as f:
-        products = json.load(f)
+        config = json.load(f)
+
+    budget = config.get("total_budget", 6000.00)
+    items = config.get("items", [])
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
+        "Accept-Language": "pt-BR,pt;q=0.9"
     }
 
-    for prod in products:
+    collected = []
+    has_target_hit = False
+
+    for item in items:
+        price = None
         try:
-            res = requests.get(prod["url"], headers=headers, timeout=15)
-            if res.status_code != 200:
-                continue
+            r = requests.get(item["url"], headers=headers, timeout=12)
+            if r.status_code == 200:
+                soup = BeautifulSoup(r.text, "html.parser")
+                for tag in soup(["script", "style", "noscript"]):
+                    tag.decompose()
+                price = extract_price(soup.get_text(separator=" ", strip=True))
+        except Exception:
+            pass
 
-            soup = BeautifulSoup(res.text, "html.parser")
-            for tag in soup(["script", "style", "noscript", "svg"]):
-                tag.decompose()
+        collected.append({
+            "name": item["name"],
+            "url": item["url"],
+            "target_price": item["target_price"],
+            "current_price": price
+        })
 
-            text_sample = soup.get_text(separator=" ", strip=True)[:4000]
-            current_price = extract_price_with_gemini(text_sample)
+        if price and price <= item["target_price"]:
+            has_target_hit = True
 
-            if current_price and current_price <= prod["target_price"]:
-                msg = (
-                    f"🚨 *Alerta de Preço Baixo!*\n\n"
-                    f"*{prod['name']}*\n"
-                    f"💰 Preço Atual: *R$ {current_price:.2f}*\n"
-                    f"🎯 Seu Alvo: R$ {prod['target_price']:.2f}\n\n"
-                    f"[Acessar Produto]({prod['url']})"
-                )
-                send_telegram_alert(msg)
-
-        except Exception as e:
-            print(f"Erro ao verificar {prod['name']}: {e}")
+    # Só gasta tokens e envia mensagem se ao menos uma peça estiver em preço atrativo
+    if has_target_hit:
+        advice = analyze_budget_and_deals(budget, collected)
+        if advice != "NO_ACTION":
+            send_telegram_alert(f"💡 *Consultoria de Setup & Alerta de Preço*\n\n{advice}")
 
 if __name__ == "__main__":
-    check_prices()
+    main()
