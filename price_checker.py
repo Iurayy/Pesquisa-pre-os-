@@ -4,12 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from google import genai
-from google.genai import types
 import requests
 
 app = FastAPI(title="PC Price Advisor API")
 
-# Libera o acesso para testar de qualquer navegador/celular
+# Libera o acesso para navegadores no celular e computador
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,8 +45,8 @@ def send_telegram_alert(message: str):
     }
     try:
         requests.post(url, json=payload, timeout=10)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Erro ao enviar para o Telegram: {e}")
 
 @app.get("/")
 def health_check():
@@ -61,26 +60,26 @@ def analyze_folder(data: FolderAnalysisRequest):
     items_text = "\n".join([f"- {it.category}: {it.target_spec}" for it in data.items])
 
     prompt = f"""
-    Você é um especialista em hardware e orçamentos no Brasil.
+    Você é um consultor especialista em montagem de computadores, hardware e orçamentos no Brasil.
     Projeto / Pasta: {data.folder_name}
     Orçamento Total Estipulado: R$ {data.total_budget:.2f}
 
     Componentes e especificações solicitadas:
     {items_text}
 
-    Sua tarefa:
-    1. Pesquise no mercado brasileiro (Kabum, Pichau, Terabyte, Amazon BR) os preços médios/menores preços atuais à vista para essas peças ou similares no mesmo patamar de desempenho.
-    2. Identifique se há alternativas similares mais baratas ou de melhor custo-benefício.
-    3. Calcule se a soma total das peças cabe no teto de R$ {data.total_budget:.2f}.
-    4. Veredito:
-       - Diga se vale a pena fechar a compra agora.
-       - Se alguma peça estiver cara a ponto de comprometer o resto do orçamento, aponte exatamente qual e dê alternativas.
-    5. Formate a resposta de forma limpa, direta, com emojis e tópicos legíveis em telas pequenas.
+    Sua tarefa de consultoria:
+    1. Avalie as peças solicitadas e indique a faixa de preço médio atual dessas categorias no mercado brasileiro (Kabum, Pichau, Terabyte, Amazon).
+    2. Sugira peças similares/equivalentes no mesmo patamar de desempenho que ofereçam melhor custo-benefício, se aplicável.
+    3. Analise o impacto financeiro global:
+       - Some a estimativa das peças e diga com clareza se o setup completo fecha dentro do limite de R$ {data.total_budget:.2f}.
+       - Caso o orçamento esteja apertado ou estourando, aponte exatamente qual componente está pesando demais e recomende onde economizar sem perder performance essencial.
+    4. Dê um veredito final claro: 'Vale a pena comprar agora' ou 'Ajuste os itens X e Y para caber no orçamento'.
+    5. Formate a resposta de forma limpa, direta, com emojis e tópicos curtos para leitura rápida no celular e Telegram.
     """
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3.6-flash",
             contents=prompt
         )
         report = response.text.strip()
