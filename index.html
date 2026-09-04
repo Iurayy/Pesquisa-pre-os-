@@ -5,49 +5,47 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Setup & Hardware Studio</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+  <link href="[https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap](https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap)" rel="stylesheet">
 </head>
 <body>
-  <!-- BARRA DE NAVEGAÇÃO MOBILE -->
+  <!-- TOPO MOBILE -->
   <header class="mobile-nav">
-    <button id="toggleFoldersMobile" class="nav-icon-btn" title="Pastas">📁</button>
+    <button id="toggleFoldersMobile" class="nav-icon-btn" type="button" title="Pastas">📁</button>
     <div class="mobile-title">
       <span id="mobileFolderLabel">Meu Projeto</span>
     </div>
-    <button id="toggleBudgetMobile" class="nav-icon-btn" title="Orçamento">💰</button>
+    <button id="toggleBudgetMobile" class="nav-icon-btn" type="button" title="Orçamento">💰</button>
   </header>
 
   <div class="workspace-layout">
     
-    <!-- COLUNA 1: PASTAS / PROJETOS -->
+    <!-- LATERAL ESQUERDA: PASTAS -->
     <aside id="sidebarLeft" class="sidebar-left">
       <div class="sidebar-header">
         <div class="brand">
           <span class="brand-pill">Studio Pro</span>
           <h2>Projetos</h2>
         </div>
-        <button id="newFolderBtn" class="btn-action">+ Nova Pasta</button>
+        <button id="newFolderBtn" class="btn-action" type="button">+ Nova Pasta</button>
       </div>
       <ul id="folderList" class="folder-list"></ul>
     </aside>
 
-    <!-- COLUNA 2: WORKSPACE PRINCIPAL -->
+    <!-- COLUNA CENTRAL -->
     <main class="main-content">
-      
-      <!-- CABEÇALHO DO PROJETO -->
       <header class="project-header">
         <div>
           <h1 id="currentFolderTitle">Setup Principal</h1>
-          <p class="subtitle">Adicione itens de qualquer nicho. A IA compara preços e alternativas na mesma categoria.</p>
+          <p class="subtitle">Adicione itens de qualquer categoria. A IA pesquisa preços e similares.</p>
         </div>
-        <button id="runAnalysisBtn" class="primary-btn">
+        <button id="runAnalysisBtn" class="primary-btn" type="button">
           <span id="runBtnText">Pesquisar com IA</span>
           <div id="loadingSpinner" class="spinner hidden"></div>
         </button>
       </header>
 
-      <!-- SEÇÃO RECOLHÍVEL: ITENS PARA PESQUISA -->
+      <!-- SEÇÃO RETRÁTIL: ITENS PARA PESQUISA -->
       <details class="items-accordion" open>
         <summary>
           <span>🎯 Componentes a Pesquisar (<strong id="accordionCount">0</strong>)</span>
@@ -55,50 +53,49 @@
         </summary>
         <div class="accordion-body">
           <div class="add-item-form">
-            <input type="text" id="inputCat" placeholder="Categoria (ex: GPU, Teclado, Monitor)" required>
-            <input type="text" id="inputSpec" placeholder="Produto desejado ou especificação" required>
-            <button id="addSpecBtn" class="btn-accent">+ Adicionar</button>
+            <input type="text" id="inputCat" placeholder="Categoria (ex: GPU, Teclado, Monitor)">
+            <input type="text" id="inputSpec" placeholder="Produto desejado ou especificação">
+            <button id="addSpecBtn" class="btn-accent" type="button">+ Adicionar</button>
           </div>
           <ul id="configuredItemsList" class="chips-list"></ul>
         </div>
       </details>
 
-      <!-- SISTEMA DE ABAS PRINCIPAIS -->
+      <!-- ABAS -->
       <div class="tab-switcher">
-        <button id="tabBtnComparison" class="tab-btn active" onclick="switchView('comparison')">
+        <button id="tabBtnComparison" class="tab-btn active" type="button" onclick="switchView('comparison')">
           <span>⚡ Setup & Similares</span>
         </button>
-        <button id="tabBtnSpecs" class="tab-btn" onclick="switchView('specs')">
+        <button id="tabBtnSpecs" class="tab-btn" type="button" onclick="switchView('specs')">
           <span>📋 Ficha Técnica & Informações</span>
         </button>
       </div>
 
-      <!-- ABA 1: COMPARAÇÕES E SIMILARES -->
+      <!-- ABA 1: COMPARAÇÃO E SIMILARES -->
       <section id="viewComparison" class="view-panel active">
         <div id="componentsContainer" class="components-grid">
           <div class="empty-state">
-            <p>Nenhum produto analisado ainda. Adicione as peças acima e clique em <strong>"Pesquisar com IA"</strong>.</p>
+            <p>Nenhum produto analisado ainda. Adicione itens acima e clique em <strong>"Pesquisar com IA"</strong>.</p>
           </div>
         </div>
 
         <div class="report-card">
-          <h3>📊 Veredito & Análise Orçamentária</h3>
-          <p id="reportContent">A análise completa do orçamento e mercado aparecerá aqui após a busca.</p>
+          <h3>📊 Veredito & Consultoria Orçamentária</h3>
+          <p id="reportContent">Aguardando pesquisa...</p>
         </div>
       </section>
 
-      <!-- ABA 2: DETALHES E ESPECIFICAÇÕES TÉCNICAS -->
+      <!-- ABA 2: ESPECIFICAÇÕES TÉCNICAS -->
       <section id="viewSpecs" class="view-panel">
         <div id="specsContainer" class="specs-grid">
           <div class="empty-state">
-            <p>Execute uma pesquisa para ver imagens e fichas técnicas detalhadas de cada produto.</p>
+            <p>Execute uma pesquisa para ver as fichas técnicas detalhadas.</p>
           </div>
         </div>
       </section>
-
     </main>
 
-    <!-- COLUNA 3: PAINEL FINANCEIRO EM TEMPO REAL -->
+    <!-- LATERAL DIREITA: RESUMO FINANCEIRO -->
     <aside id="sidebarRight" class="sidebar-right">
       <div class="budget-panel">
         <div class="budget-header">
@@ -136,7 +133,7 @@
         </div>
 
         <div class="selected-items-breakdown">
-          <h4>Itens no Carrinho</h4>
+          <h4>Itens Selecionados</h4>
           <ul id="selectedSummaryList" class="summary-list"></ul>
         </div>
       </div>
