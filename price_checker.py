@@ -7,7 +7,7 @@ from typing import List
 from google import genai
 import requests
 
-app = FastAPI(title="PC Price Advisor API")
+app = FastAPI(title="Universal Price & Spec Advisor API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,42 +45,63 @@ def send_telegram_alert(message: str):
     }
     try:
         requests.post(url, json=payload, timeout=10)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Erro ao enviar Telegram: {e}")
 
 @app.get("/")
 def health_check():
-    return {"status": "online", "message": "API Ativa"}
+    return {"status": "online"}
 
 @app.post("/analyze")
 def analyze_folder(data: FolderAnalysisRequest):
     if not client:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY ausente.")
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY ausente no servidor.")
 
-    items_text = "\n".join([f"- {it.category}: {it.target_spec}" for it in data.items])
+    items_text = "\n".join([f"- Categoria: {it.category} | Produto/Busca: {it.target_spec}" for it in data.items])
 
     prompt = f"""
-    Você é um especialista em hardware e orçamentos de PC no Brasil.
-    Orçamento teto: R$ {data.total_budget:.2f}
-    Itens:
+    Você é um consultor especialista em compras, tecnologia e análise de mercado no Brasil.
+    Projeto: {data.folder_name}
+    Orçamento Máximo: R$ {data.total_budget:.2f}
+
+    Itens solicitados:
     {items_text}
 
-    Retorne ESTRITAMENTE um JSON válido (sem markdown, sem ```json) com esta estrutura exata:
+    Sua tarefa:
+    1. Analise o produto solicitado em cada categoria. O usuário pode pedir qualquer produto (hardware, periféricos, áudio, eletrônicos, etc.).
+    2. Estime o preço médio de mercado atual à vista em reais (BRL).
+    3. Traga de 1 a 3 similares/concorrentes diretos EXATAMENTE dentro da mesma categoria de desempenho/função, com seus preços estimados e pontos fortes.
+    4. Para cada item principal e similar, forneça uma URL de busca direta no Google Shopping ou loja recomendada no padrão:
+       "https://www.google.com/search?tbm=shop&q=" + nome_codificado
+    5. No campo 'specs', detalhe 3 a 5 especificações técnicas cruciais de forma resumida e direta.
+    6. Forneça uma análise orçamentária geral em 'summary_report'.
+
+    Retorne ESTRITAMENTE um JSON válido (sem texto antes ou depois, sem ```json):
     {{
       "items": [
         {{
-          "category": "CPU",
-          "name": "Nome da peça principal",
-          "price": 1200.00,
+          "category": "Nome da Categoria",
+          "name": "Nome Oficial do Produto",
+          "price": 1250.00,
+          "store_url": "[https://www.google.com/search?tbm=shop&q=Nome+Do+Produto](https://www.google.com/search?tbm=shop&q=Nome+Do+Produto)",
+          "specs": [
+            "Especificação 1",
+            "Especificação 2",
+            "Especificação 3"
+          ],
           "similars": [
-            {{ "name": "Similar 1", "price": 1050.00, "note": "mesmo desempenho sem vídeo integrado" }},
-            {{ "name": "Similar 2", "price": 1150.00, "note": "ótima alternativa" }}
+            {{
+              "name": "Nome do Similar 1",
+              "price": 1100.00,
+              "store_url": "[https://www.google.com/search?tbm=shop&q=Nome+Similar+1](https://www.google.com/search?tbm=shop&q=Nome+Similar+1)",
+              "note": "mesmo desempenho, mais barato",
+              "specs": ["Destaque técnico 1", "Destaque técnico 2"]
+            }}
           ]
         }}
       ],
-      "summary_report": "Texto do seu relatório e veredito final, analisando se o total cabe no orçamento e onde economizar."
+      "summary_report": "Resumo geral da consultoria, viabilidade do orçamento e recomendações."
     }}
-    Preços em reais numéricos (float).
     """
 
     try:
@@ -89,15 +110,4 @@ def analyze_folder(data: FolderAnalysisRequest):
             contents=prompt
         )
         raw_text = response.text.strip()
-        if raw_text.startswith("```"):
-            raw_text = raw_text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
-        
-        parsed = json.loads(raw_text)
-
-        if data.notify_telegram:
-            msg = f"📁 *{data.folder_name}* (Teto: R$ {data.total_budget:.2f})\n\n{parsed.get('summary_report', '')}"
-            send_telegram_alert(msg)
-
-        return parsed
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        if raw_text.startswith("
