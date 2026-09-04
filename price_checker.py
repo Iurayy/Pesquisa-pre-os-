@@ -85,8 +85,7 @@ Instruções obrigatórias:
 2. Identifique de 1 a 2 alternativas/similares na MESMA categoria de uso e patamar de desempenho, também com preço estimado e especificações.
 3. Analise se a soma dos itens principais cabe no orçamento de R$ {data.total_budget:.2f} e elabore um parecer no campo 'summary_report'.
 
-Responda ESTRITAMENTE em formato JSON válido, sem texto explicativo antes ou depois, sem crases markdown (```json).
-Estrutura exigida:
+Gere EXCLUSIVAMENTE uma estrutura JSON válida com estas chaves:
 {{
   "items": [
     {{
@@ -109,28 +108,25 @@ Estrutura exigida:
 """
 
     try:
+        # Usa configuração nativa para garantir saída em JSON limpo
+        from google.genai import types
         response = client.models.generate_content(
             model="gemini-3.6-flash",
-            contents=prompt
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
         )
         raw_text = response.text.strip()
-
-        # Limpeza defensiva de markdown
-        if raw_text.startswith("```"):
-            raw_text = raw_text.split("\n", 1)[1]
-            if raw_text.endswith("```"):
-                raw_text = raw_text.rsplit("\n", 1)[0]
-            raw_text = raw_text.strip()
-
         parsed = json.loads(raw_text)
 
         # Gera URLs de busca direta seguras para cada produto
         for it in parsed.get("items", []):
             q_main = urllib.parse.quote_plus(f"{it.get('category', '')} {it.get('name', '')}")
-            it["store_url"] = f"[https://www.google.com/search?tbm=shop&q=](https://www.google.com/search?tbm=shop&q=){q_main}"
+            it["store_url"] = f"https://www.google.com/search?tbm=shop&q={q_main}"
             for sim in it.get("similars", []):
                 q_sim = urllib.parse.quote_plus(f"{it.get('category', '')} {sim.get('name', '')}")
-                sim["store_url"] = f"[https://www.google.com/search?tbm=shop&q=](https://www.google.com/search?tbm=shop&q=){q_sim}"
+                sim["store_url"] = f"https://www.google.com/search?tbm=shop&q={q_sim}"
 
         if data.notify_telegram:
             rep = parsed.get("summary_report", "")
@@ -139,10 +135,12 @@ Estrutura exigida:
 
         return parsed
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as err:
+        print(f"Erro JSONDecode: {err}")
         raise HTTPException(
             status_code=500, 
-            detail="A IA não retornou um formato JSON válido. Tente novamente em instantes."
+            detail="A IA retornou um JSON incompleto. Tente novamente."
         )
     except Exception as e:
+        print(f"Erro geral: {e}")
         raise HTTPException(status_code=500, detail=str(e))
