@@ -333,8 +333,9 @@ document.getElementById("runAnalysisBtn").addEventListener("click", async () => 
     renderComparisonView(data);
     renderSpecsView(data);
     updateBudgetSidebar();
-  } catch (err) {
-    alert("Erro ao consultar o servidor. Aguarde o deploy do Render finalizar (1 a 2 minutos) e tente novamente.");
+  } } catch (err) {
+    console.error("Detalhes do erro:", err);
+    alert("Erro retornado pelo servidor:\n" + err.message);
   } finally {
     btn.disabled = false;
     spinner.classList.add("hidden");
