@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Exemplo - Fone de Ouvido XYZ",
+    "url": "https://www.mercadolivre.com.br/COLOQUE-O-LINK-DO-PRODUTO-AQUI",
+    "target_price": 199.90
+  },
+  {
+    "name": "Exemplo - Notebook ABC",
+    "url": "https://www.amazon.com.br/COLOQUE-O-LINK-DO-PRODUTO-AQUI",
+    "target_price": 2499.00
+  }
+]
