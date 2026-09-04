@@ -3,14 +3,14 @@ import json
 import urllib.parse
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import requests
 from google import genai
+from google.genai import types
 
 app = FastAPI(title="Setup Advisor API")
 
-# Permite chamadas de qualquer origem (GitHub Pages, localhost, mobile)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,15 +23,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-def get_gemini_client():
-    if not GEMINI_API_KEY:
-        return None
-    try:
-        return genai.Client(api_key=GEMINI_API_KEY)
-    except Exception as e:
-        print(f"Erro ao inicializar cliente Gemini: {e}")
-        return None
-
 class ItemRequirement(BaseModel):
     category: str
     target_spec: str
@@ -41,6 +32,29 @@ class FolderAnalysisRequest(BaseModel):
     total_budget: float
     items: List[ItemRequirement]
     notify_telegram: Optional[bool] = False
+
+class SimilarItem(BaseModel):
+    name: str
+    price: float
+    note: str
+    specs: List[str] = []
+
+class AnalyzedItem(BaseModel):
+    category: str
+    name: str
+    price: float
+    specs: List[str] = []
+    similars: List[SimilarItem] = []
+
+class AIAnalysisResponse(BaseModel):
+    items: List[AnalyzedItem]
+    summary_report: str
+
+def get_gemini_client():
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return None
+    return genai.Client(api_key=api_key)
 
 def send_telegram_alert(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
@@ -55,72 +69,56 @@ def send_telegram_alert(message: str):
     try:
         requests.post(url, json=payload, timeout=10)
     except Exception as e:
-        print(f"Erro no envio Telegram: {e}")
+        print(f"Erro Telegram: {e}")
 
 @app.get("/")
 def health_check():
-    return {"status": "online", "message": "Backend ativo e funcionando"}
+    has_key = bool(os.environ.get("GEMINI_API_KEY"))
+    return {
+        "status": "online",
+        "gemini_configured": has_key,
+        "message": "Backend ativo"
+    }
 
 @app.post("/analyze")
 def analyze_folder(data: FolderAnalysisRequest):
     client = get_gemini_client()
     if not client:
         raise HTTPException(
-            status_code=500, 
-            detail="GEMINI_API_KEY não configurada ou inválida no Render."
+            status_code=500,
+            detail="A variável GEMINI_API_KEY não foi encontrada nas Environment Variables do Render."
         )
 
-    items_list_str = "\n".join([f"- Categoria: {it.category} | Especificacao: {it.target_spec}" for it in data.items])
+    items_list_str = "\n".join([f"- {it.category}: {it.target_spec}" for it in data.items])
 
     prompt = f"""
-Você é um consultor especialista em tecnologia, hardware e compras no mercado brasileiro.
+Você é um consultor especialista em hardware, periféricos e compras no Brasil.
 Projeto: {data.folder_name}
-Orçamento limite: R$ {data.total_budget:.2f}
+Orçamento Máximo: R$ {data.total_budget:.2f}
 
-Itens desejados pelo usuário:
+Itens solicitados:
 {items_list_str}
 
-Instruções obrigatórias:
-1. Para cada item da lista, informe o nome oficial de mercado, um preço médio estimado à vista no Brasil (em R$) e 3 especificações técnicas objetivas.
-2. Identifique de 1 a 2 alternativas/similares na MESMA categoria de uso e patamar de desempenho, também com preço estimado e especificações.
-3. Analise se a soma dos itens principais cabe no orçamento de R$ {data.total_budget:.2f} e elabore um parecer no campo 'summary_report'.
-
-Gere EXCLUSIVAMENTE uma estrutura JSON válida com estas chaves:
-{{
-  "items": [
-    {{
-      "category": "Nome da Categoria",
-      "name": "Nome do Produto Principal",
-      "price": 1000.0,
-      "specs": ["Espec 1", "Espec 2", "Espec 3"],
-      "similars": [
-        {{
-          "name": "Nome do Similar",
-          "price": 950.0,
-          "note": "ótimo custo benefício",
-          "specs": ["Destaque 1", "Destaque 2"]
-        }}
-      ]
-    }}
-  ],
-  "summary_report": "Texto do seu parecer sobre os preços e orçamento."
-}}
+Para cada item:
+1. Informe o nome do produto principal recomendado no mercado brasileiro e seu preço estimado à vista (em R$).
+2. Liste de 1 a 2 alternativas/similares na mesma categoria.
+3. Inclua 3 especificações sucintas para cada um.
+4. Faça uma análise no campo summary_report avaliando se os itens cabem nos R$ {data.total_budget:.2f}.
 """
 
     try:
-        # Usa configuração nativa para garantir saída em JSON limpo
-        from google.genai import types
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
-                response_mime_type="application/json"
-            )
+                response_mime_type="application/json",
+                response_schema=AIAnalysisResponse,
+            ),
         )
-        raw_text = response.text.strip()
-        parsed = json.loads(raw_text)
 
-        # Gera URLs de busca direta seguras para cada produto
+        parsed = json.loads(response.text)
+
+        # Adiciona links diretos de busca de compras
         for it in parsed.get("items", []):
             q_main = urllib.parse.quote_plus(f"{it.get('category', '')} {it.get('name', '')}")
             it["store_url"] = f"https://www.google.com/search?tbm=shop&q={q_main}"
@@ -135,12 +133,6 @@ Gere EXCLUSIVAMENTE uma estrutura JSON válida com estas chaves:
 
         return parsed
 
-    except json.JSONDecodeError as err:
-        print(f"Erro JSONDecode: {err}")
-        raise HTTPException(
-            status_code=500, 
-            detail="A IA retornou um JSON incompleto. Tente novamente."
-        )
     except Exception as e:
-        print(f"Erro geral: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Erro na IA: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro interno da IA: {str(e)}")
