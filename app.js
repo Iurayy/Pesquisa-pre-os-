@@ -1,6 +1,6 @@
-const API_URL = "https://alerta-precos.onrender.com/analyze";
+const API_URL = "[https://alerta-precos.onrender.com/analyze](https://alerta-precos.onrender.com/analyze)";
 
-let folders = JSON.parse(localStorage.getItem("setup_folders_v2")) || [
+let folders = JSON.parse(localStorage.getItem("setup_folders_v3")) || [
   {
     id: "folder_default",
     name: "Setup Ryzen AM5",
@@ -15,17 +15,16 @@ let folders = JSON.parse(localStorage.getItem("setup_folders_v2")) || [
 ];
 
 let activeFolderId = folders[0].id;
-let currentView = "comparison"; // 'comparison' ou 'specs'
+let currentView = "comparison";
 
 function saveFolders() {
-  localStorage.setItem("setup_folders_v2", JSON.stringify(folders));
+  localStorage.setItem("setup_folders_v3", JSON.stringify(folders));
 }
 
 function getActiveFolder() {
   return folders.find(f => f.id === activeFolderId) || folders[0];
 }
 
-// ALTERNAR ENTRE ABAS
 function switchView(viewName) {
   currentView = viewName;
   document.getElementById("tabBtnComparison").classList.toggle("active", viewName === "comparison");
@@ -34,7 +33,6 @@ function switchView(viewName) {
   document.getElementById("viewSpecs").classList.toggle("active", viewName === "specs");
 }
 
-// RENDERIZAR PASTAS
 function renderFolders() {
   const list = document.getElementById("folderList");
   list.innerHTML = "";
@@ -46,14 +44,12 @@ function renderFolders() {
       activeFolderId = f.id;
       renderFolders();
       loadActiveFolder();
-      // Fecha menu mobile se aberto
       document.getElementById("sidebarLeft").classList.remove("open");
     };
     list.appendChild(li);
   });
 }
 
-// CARREGAR PASTA ATIVA
 function loadActiveFolder() {
   const f = getActiveFolder();
   document.getElementById("currentFolderTitle").textContent = f.name;
@@ -61,7 +57,6 @@ function loadActiveFolder() {
   document.getElementById("budgetInput").value = f.budget;
   document.getElementById("accordionCount").textContent = f.items.length;
 
-  // Lista dos chips superiores
   const chipList = document.getElementById("configuredItemsList");
   chipList.innerHTML = "";
   f.items.forEach((it, idx) => {
@@ -83,7 +78,6 @@ function removeConfiguredItem(index) {
   loadActiveFolder();
 }
 
-// ABA 1: COMPARAÇÃO E SIMILARES
 function renderComparisonView(result) {
   const container = document.getElementById("componentsContainer");
   const reportBox = document.getElementById("reportContent");
@@ -95,13 +89,12 @@ function renderComparisonView(result) {
     return;
   }
 
-  reportBox.textContent = result.summary_report || "Sem relatório disponível.";
+  reportBox.textContent = result.summary_report || "Sem parecer disponível.";
 
   result.items.forEach((item, itemIdx) => {
     const card = document.createElement("div");
     card.className = "comp-card";
 
-    // Item Principal
     const mainBox = document.createElement("div");
     mainBox.className = "main-product-box";
     mainBox.innerHTML = `
@@ -113,11 +106,10 @@ function renderComparisonView(result) {
         </a>
       </div>
       <div class="main-price-wrap">
-        <span class="main-price">R$ ${item.price.toFixed(2)}</span>
+        <span class="main-price">R$ ${Number(item.price || 0).toFixed(2)}</span>
       </div>
     `;
 
-    // Suporte Drag & Drop no PC
     mainBox.ondragover = (e) => { e.preventDefault(); mainBox.classList.add("drag-over"); };
     mainBox.ondragleave = () => mainBox.classList.remove("drag-over");
     mainBox.ondrop = (e) => {
@@ -129,7 +121,6 @@ function renderComparisonView(result) {
 
     card.appendChild(mainBox);
 
-    // Similares da mesma categoria
     if (item.similars && item.similars.length > 0) {
       const simWrap = document.createElement("div");
       simWrap.className = "similars-container";
@@ -145,9 +136,9 @@ function renderComparisonView(result) {
             <div class="similar-note">${sim.note || ""}</div>
           </div>
           <div class="similar-actions">
-            <span class="similar-price">R$ ${sim.price.toFixed(2)}</span>
+            <span class="similar-price">R$ ${Number(sim.price || 0).toFixed(2)}</span>
             <a href="${sim.store_url || '#'}" target="_blank" rel="noopener noreferrer" class="btn-store">Loja ↗</a>
-            <button type="button" class="btn-swap" onclick='swapWithSimilar(${itemIdx}, ${JSON.stringify(sim)})'>⇄ Usar</button>
+            <button type="button" class="btn-swap" onclick='swapWithSimilar(${itemIdx}, ${JSON.stringify(sim).replace(/'/g, "&apos;")})'>⇄ Usar</button>
           </div>
         `;
         simEl.ondragstart = (e) => {
@@ -162,7 +153,6 @@ function renderComparisonView(result) {
   });
 }
 
-// TROCA DE ITEM (VIA CLIQUE OU DRAG & DROP)
 function swapWithSimilar(itemIdx, simData) {
   const f = getActiveFolder();
   const item = f.analysisResult.items[itemIdx];
@@ -189,7 +179,6 @@ function swapWithSimilar(itemIdx, simData) {
   updateBudgetSidebar();
 }
 
-// ABA 2: ESPECIFICAÇÕES E FOTOS/ÍCONES
 function renderSpecsView(result) {
   const container = document.getElementById("specsContainer");
   container.innerHTML = "";
@@ -203,11 +192,10 @@ function renderSpecsView(result) {
     const card = document.createElement("div");
     card.className = "spec-card";
 
-    // Ícone representativo por categoria
     let icon = "📦";
-    const catUpper = item.category.toUpperCase();
+    const catUpper = (item.category || "").toUpperCase();
     if (catUpper.includes("CPU") || catUpper.includes("PROCESSADOR")) icon = "⚡";
-    else if (catUpper.includes("GPU") || catUpper.includes("VÍDEO")) icon = "🎮";
+    else if (catUpper.includes("GPU") || catUpper.includes("VÍDEO") || catUpper.includes("VIDEO")) icon = "🎮";
     else if (catUpper.includes("RAM") || catUpper.includes("MEMÓRIA")) icon = "🧠";
     else if (catUpper.includes("MONITOR")) icon = "🖥️";
     else if (catUpper.includes("FONTE")) icon = "🔌";
@@ -215,8 +203,8 @@ function renderSpecsView(result) {
 
     const specsHtml = (item.specs || [
       "Categoria: " + item.category,
-      "Preço estimado: R$ " + item.price.toFixed(2),
-      "Alta procura no mercado nacional"
+      "Preço de referência: R$ " + Number(item.price || 0).toFixed(2),
+      "Disponível no mercado nacional"
     ]).map(s => `<li>${s}</li>`).join("");
 
     card.innerHTML = `
@@ -239,7 +227,6 @@ function renderSpecsView(result) {
   });
 }
 
-// ATUALIZAR SIDEBAR FINANCEIRA
 function updateBudgetSidebar() {
   const f = getActiveFolder();
   const budget = parseFloat(document.getElementById("budgetInput").value) || 0;
@@ -252,9 +239,9 @@ function updateBudgetSidebar() {
 
   if (f.analysisResult && f.analysisResult.items) {
     f.analysisResult.items.forEach(it => {
-      total += it.price;
+      total += Number(it.price || 0);
       const li = document.createElement("li");
-      li.innerHTML = `<span>${it.name.substring(0, 24)}...</span><strong>R$ ${it.price.toFixed(2)}</strong>`;
+      li.innerHTML = `<span>${(it.name || "").substring(0, 22)}...</span><strong>R$ ${Number(it.price || 0).toFixed(2)}</strong>`;
       list.appendChild(li);
     });
   }
@@ -267,14 +254,13 @@ function updateBudgetSidebar() {
   remEl.style.color = remaining < 0 ? "var(--danger)" : "var(--success)";
 
   const pct = budget > 0 ? Math.min((total / budget) * 100, 100) : 0;
-  document.getElementById("progressPercent").textContent = `${Math.round((total / budget) * 100)}%`;
+  document.getElementById("progressPercent").textContent = `${Math.round(budget > 0 ? (total / budget) * 100 : 0)}%`;
 
   const progressEl = document.getElementById("budgetProgress");
   progressEl.style.width = `${pct}%`;
   progressEl.style.background = remaining < 0 ? "var(--danger)" : "var(--success)";
 }
 
-// BOTÕES MOBILE
 document.getElementById("toggleFoldersMobile").onclick = () => {
   document.getElementById("sidebarLeft").classList.toggle("open");
   document.getElementById("sidebarRight").classList.remove("open");
@@ -284,9 +270,8 @@ document.getElementById("toggleBudgetMobile").onclick = () => {
   document.getElementById("sidebarLeft").classList.remove("open");
 };
 
-// CRIAR NOVA PASTA
 document.getElementById("newFolderBtn").addEventListener("click", () => {
-  const name = prompt("Nome do projeto/pasta (ex: Meu Setup, Home Studio, Periféricos):");
+  const name = prompt("Nome da pasta/projeto (ex: Câmera & Lentes, Teclados Custom):");
   if (name) {
     const newId = `folder_${Date.now()}`;
     folders.push({
@@ -303,7 +288,6 @@ document.getElementById("newFolderBtn").addEventListener("click", () => {
   }
 });
 
-// ADICIONAR ITEM À LISTA
 document.getElementById("addSpecBtn").addEventListener("click", () => {
   const cat = document.getElementById("inputCat").value.trim();
   const spec = document.getElementById("inputSpec").value.trim();
@@ -319,10 +303,9 @@ document.getElementById("addSpecBtn").addEventListener("click", () => {
 
 document.getElementById("budgetInput").addEventListener("input", updateBudgetSidebar);
 
-// ACIONAR ANÁLISE COM IA
 document.getElementById("runAnalysisBtn").addEventListener("click", async () => {
   const f = getActiveFolder();
-  if (f.items.length === 0) return alert("Adicione ao menos um produto para pesquisar!");
+  if (f.items.length === 0) return alert("Adicione pelo menos um produto para pesquisar!");
 
   const btn = document.getElementById("runAnalysisBtn");
   const spinner = document.getElementById("loadingSpinner");
@@ -343,6 +326,7 @@ document.getElementById("runAnalysisBtn").addEventListener("click", async () => 
         notify_telegram: true
       })
     });
+    if (!res.ok) throw new Error("Erro na API");
     const data = await res.json();
     f.analysisResult = data;
     saveFolders();
@@ -350,7 +334,7 @@ document.getElementById("runAnalysisBtn").addEventListener("click", async () => 
     renderSpecsView(data);
     updateBudgetSidebar();
   } catch (err) {
-    alert("Erro ao consultar a IA. Verifique se o servidor está ativo.");
+    alert("Erro ao consultar o servidor. Aguarde o deploy do Render finalizar (1 a 2 minutos) e tente novamente.");
   } finally {
     btn.disabled = false;
     spinner.classList.add("hidden");
@@ -358,6 +342,5 @@ document.getElementById("runAnalysisBtn").addEventListener("click", async () => 
   }
 });
 
-// INICIAR
 renderFolders();
 loadActiveFolder();
