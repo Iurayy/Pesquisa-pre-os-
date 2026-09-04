@@ -1,16 +1,42 @@
 import os
-import json
-import requests
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
 from google import genai
 from google.genai import types
+import requests
 
+app = FastAPI(title="PC Price Advisor API")
+
+# Libera o acesso para testar de qualquer navegador/celular
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
-def send_telegram_alert(message):
+class ItemRequirement(BaseModel):
+    category: str
+    target_spec: str
+
+class FolderAnalysisRequest(BaseModel):
+    folder_name: str
+    total_budget: float
+    items: List[ItemRequirement]
+    notify_telegram: bool = False
+
+def send_telegram_alert(message: str):
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
+        return
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -18,31 +44,38 @@ def send_telegram_alert(message):
         "parse_mode": "Markdown",
         "disable_web_page_preview": True
     }
-    requests.post(url, json=payload, timeout=15)
+    try:
+        requests.post(url, json=payload, timeout=10)
+    except Exception:
+        pass
 
-def evaluate_build():
-    with open("products.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
+@app.get("/")
+def health_check():
+    return {"status": "online", "message": "API de Análise de Preços Ativa!"}
 
-    budget = config.get("total_budget", 6000.00)
-    items = config.get("hardware_requirements", [])
+@app.post("/analyze")
+def analyze_folder(data: FolderAnalysisRequest):
+    if not client:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY não configurada no servidor.")
+
+    items_text = "\n".join([f"- {it.category}: {it.target_spec}" for it in data.items])
 
     prompt = f"""
-    Você é um assistente sênior de hardware e consultor de compras no mercado brasileiro.
-    O usuário possui um orçamento TOTAL rigoroso de R$ {budget:.2f} para montar o setup completo.
+    Você é um especialista em hardware e orçamentos no Brasil.
+    Projeto / Pasta: {data.folder_name}
+    Orçamento Total Estipulado: R$ {data.total_budget:.2f}
 
-    Lista de componentes desejados (ou alternativas com o mesmo nível de desempenho/qualidade):
-    {json.dumps(items, indent=2, ensure_ascii=False)}
+    Componentes e especificações solicitadas:
+    {items_text}
 
     Sua tarefa:
-    1. Pesquise na internet os preços atuais médios/à vista no Brasil (Kabum, Pichau, Terabyte, Amazon BR, etc.) para os itens ou similares equivalentes.
-    2. Encontre se há promoções de destaque ou peças similares mais baratas que entregam a mesma performance.
-    3. Analise o impacto financeiro global:
-       - Se encontrar uma peça específica barata (ou similar vantajosa), analise: comprá-la agora deixará saldo suficiente para comprar as outras peças restantes sem estourar os R$ {budget:.2f}?
-       - Exemplo de alerta se for inviável: 'A GPU X está por R$ 3.400. Apesar do preço aceitável, sobrariam apenas R$ 2.600 para as outras 8 peças, tornando inviável fechar com Ryzen 5 7600 e DDR5 dentro de R$ {budget:.2f}.'
-       - Exemplo se for viável: 'Vale a pena comprar a RAM/GPU agora por R$ Y, pois os outros componentes somam R$ Z e fecham dentro dos R$ {budget:.2f}!'
-    4. Seja direto e prático: cite o componente encontrado (ou similar recomendado), o preço aproximado à vista e a recomendação final de compra.
-    5. Formate a mensagem de maneira limpa com marcadores e emojis para leitura rápida no Telegram.
+    1. Pesquise no mercado brasileiro (Kabum, Pichau, Terabyte, Amazon BR) os preços médios/menores preços atuais à vista para essas peças ou similares no mesmo patamar de desempenho.
+    2. Identifique se há alternativas similares mais baratas ou de melhor custo-benefício.
+    3. Calcule se a soma total das peças cabe no teto de R$ {data.total_budget:.2f}.
+    4. Veredito:
+       - Diga se vale a pena fechar a compra agora.
+       - Se alguma peça estiver cara a ponto de comprometer o resto do orçamento, aponte exatamente qual e dê alternativas.
+    5. Formate a resposta de forma limpa, direta, com emojis e tópicos legíveis em telas pequenas.
     """
 
     try:
@@ -53,16 +86,16 @@ def evaluate_build():
                 tools=[{"google_search": {}}]
             )
         )
-        return response.text.strip()
+        report = response.text.strip()
+
+        if data.notify_telegram:
+            msg = f"📁 *Pasta:* {data.folder_name}\n💰 *Orçamento:* R$ {data.total_budget:.2f}\n\n{report}"
+            send_telegram_alert(msg)
+
+        return {
+            "folder": data.folder_name,
+            "budget": data.total_budget,
+            "analysis": report
+        }
     except Exception as e:
-        print(f"Erro ao processar análise: {e}")
-        return None
-
-def main():
-    report = evaluate_build()
-    if report:
-        header = "🖥️ *Relatório & Consultoria de Preços*\n\n"
-        send_telegram_alert(header + report)
-
-if __name__ == "__main__":
-    main()
+        raise HTTPException(status_code=500, detail=str(e))
