@@ -95,6 +95,8 @@ function renderComparisonView(result) {
     const card = document.createElement("div");
     card.className = "comp-card";
 
+    const storeLabel = item.store_name ? `🛒 ${item.store_name} ↗` : "🛒 Ir para Loja ↗";
+
     const mainBox = document.createElement("div");
     mainBox.className = "main-product-box";
     mainBox.innerHTML = `
@@ -102,7 +104,7 @@ function renderComparisonView(result) {
         <span class="cat-tag">${item.category}</span>
         <h4>${item.name}</h4>
         <a href="${item.store_url || '#'}" target="_blank" rel="noopener noreferrer" class="btn-store">
-          🛒 Ir para Loja ↗
+          ${storeLabel}
         </a>
       </div>
       <div class="main-price-wrap">
@@ -127,6 +129,7 @@ function renderComparisonView(result) {
       simWrap.innerHTML = `<span class="similars-heading">Alternativas Similares em ${item.category}:</span>`;
 
       item.similars.forEach(sim => {
+        const simStoreLabel = sim.store_name ? `${sim.store_name} ↗` : "Loja ↗";
         const simEl = document.createElement("div");
         simEl.className = "similar-card";
         simEl.draggable = true;
@@ -137,7 +140,7 @@ function renderComparisonView(result) {
           </div>
           <div class="similar-actions">
             <span class="similar-price">R$ ${Number(sim.price || 0).toFixed(2)}</span>
-            <a href="${sim.store_url || '#'}" target="_blank" rel="noopener noreferrer" class="btn-store">Loja ↗</a>
+            <a href="${sim.store_url || '#'}" target="_blank" rel="noopener noreferrer" class="btn-store">${simStoreLabel}</a>
             <button type="button" class="btn-swap" onclick='swapWithSimilar(${itemIdx}, ${JSON.stringify(sim).replace(/'/g, "&apos;")})'>⇄ Usar</button>
           </div>
         `;
@@ -160,6 +163,7 @@ function swapWithSimilar(itemIdx, simData) {
   const oldMain = {
     name: item.name,
     price: item.price,
+    store_name: item.store_name,
     store_url: item.store_url,
     note: "Substituído anteriormente",
     specs: item.specs || []
@@ -167,6 +171,7 @@ function swapWithSimilar(itemIdx, simData) {
 
   item.name = simData.name;
   item.price = simData.price;
+  item.store_name = simData.store_name;
   item.store_url = simData.store_url;
   item.specs = simData.specs || item.specs;
 
@@ -207,13 +212,15 @@ function renderSpecsView(result) {
       "Disponível no mercado nacional"
     ]).map(s => `<li>${s}</li>`).join("");
 
+    const storeLabel = item.store_name ? `Ver na ${item.store_name} ↗` : "Ver Loja ↗";
+
     card.innerHTML = `
       <div class="spec-header">
         <div>
           <span class="cat-tag">${item.category}</span>
           <h4>${item.name}</h4>
         </div>
-        <a href="${item.store_url || '#'}" target="_blank" rel="noopener noreferrer" class="btn-store">Ver Loja ↗</a>
+        <a href="${item.store_url || '#'}" target="_blank" rel="noopener noreferrer" class="btn-store">${storeLabel}</a>
       </div>
       <div class="spec-image-box">
         <span>${icon}</span>
