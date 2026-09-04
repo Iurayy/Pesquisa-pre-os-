@@ -1,7 +1,47 @@
 [
   {
-    "name": "Produto Teste",
-    "url": "https://www.google.com",
+    "name": "Processador AMD Ryzen 5 7600",
+    "url": "https://www.kabum.com.br/link-do-produto",
     "target_price": 1000.00
+  },
+  {
+    "name": "Placa-Mãe ASRock B650M-H/M.2+",
+    "url": "https://www.terabyteshop.com.br/link-do-produto",
+    "target_price": 500.00
+  },
+  {
+    "name": "Memória RAM 32GB (2x16GB) Kingston Fury DDR5 6000MHz",
+    "url": "https://www.kabum.com.br/link-do-produto",
+    "target_price": 1200.00
+  },
+  {
+    "name": "Placa de Vídeo RX 9060 XT 16GB",
+    "url": "https://www.pichau.com.br/link-do-produto",
+    "target_price": 3300.00
+  },
+  {
+    "name": "Fonte MSI MAG A650BN 650W",
+    "url": "https://www.kabum.com.br/link-do-produto",
+    "target_price": 277.00
+  },
+  {
+    "name": "Monitor LG UltraGear 24\" 144Hz",
+    "url": "https://www.amazon.com.br/link-do-produto",
+    "target_price": 600.00
+  },
+  {
+    "name": "SSD 1TB NVMe M.2",
+    "url": "https://www.kabum.com.br/link-do-produto",
+    "target_price": 650.00
+  },
+  {
+    "name": "Gabinete Husky Dome 100",
+    "url": "https://www.kabum.com.br/link-do-produto",
+    "target_price": 140.00
+  },
+  {
+    "name": "Kit 3-4 Fans 120mm",
+    "url": "https://www.terabyteshop.com.br/link-do-produto",
+    "target_price": 100.00
   }
 ]
