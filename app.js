@@ -326,7 +326,9 @@ document.getElementById("runAnalysisBtn").addEventListener("click", async () => 
         notify_telegram: true
       })
     });
-    if (!res.ok) throw new Error("Erro na API");
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Erro HTTP ${res.status}`);
     const data = await res.json();
     f.analysisResult = data;
     saveFolders();
