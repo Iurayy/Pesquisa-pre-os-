@@ -81,10 +81,7 @@ def analyze_folder(data: FolderAnalysisRequest):
     try:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[{"google_search": {}}]
-            )
+            contents=prompt
         )
         report = response.text.strip()
 
